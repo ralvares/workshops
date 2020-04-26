@@ -1,0 +1,158 @@
+= Linux Capabilities
+
+Linux capabilities: how they are defined, their purpose,and how they affect security.
+
+According to the capabilities man page:
+
+Capabilities are distinct units of privilege that can be independently enabled or disabled.
+Capabilities were added to the kernel around 15 or so years ago, to try to divide up the power of root. Originally the kernel allocated a 32-bit bitmask to define these capabilities. A few years ago it was expanded to 64. There are currently approximately 38 defined capabilities.
+
+Capabilities are things like the ability to send raw IP packets, change hostnames or bind to ports below 1024. When we run containers we can drop a whole bunch of capabilities before running our containers, without causing the vast majority of containerized applications to fail.
+
+Most capabilities are required to manipulate the kernel/system, and these are used by the container framework (docker), but seldom used by the processes running inside the container. However, some containers require a few capabilities, for example a container process needs capabilities like setuid/setgid to drop privileges. As with most things in the container world, we try to establish a compromise between security and the ability to be efficient.
+
+*Using capsh*
+
+```
+capsh --help
+usage: capsh [args ...]
+  --help         this message (or try 'man capsh')
+  --print        display capability relevant state
+  --decode=xxx   decode a hex string to a list of caps
+  --supports=xxx exit 1 if capability xxx unsupported
+  --drop=xxx     remove xxx,.. capabilities from bset
+  --caps=xxx     set caps as per cap_from_text()
+  --inh=xxx      set xxx,.. inheritiable set
+  --secbits=<n>  write a new value for securebits
+  --keep=<n>     set keep-capabability bit to <n>
+  --uid=<n>      set uid to <n> (hint: id <username>)
+  --gid=<n>      set gid to <n> (hint: id <username>)
+  --groups=g,... set the supplemental groups
+  --user=<name>  set uid,gid and groups to that of user
+  --chroot=path  chroot(2) to this path
+  --killit=<n>   send signal(n) to child
+  --forkfor=<n>  fork and make child sleep for <n> sec
+  ==             re-exec(capsh) with args as for --
+  --             remaing arguments are for /bin/bash
+                 (without -- [capsh] will simply exit(0))
+```
+
+Let's jump into the deep end and see how we can work with capabilities in practice. The first tool most people will come across when working with caps is capsh. 
+
+Running capsh gives the following output:
+
+```
+capsh --print
+```
+
+```
+Current: =
+Bounding set =cap_chown,cap_dac_override,cap_dac_read_search,cap_fowner,cap_fsetid,cap_kill,cap_setgid,cap_setuid,cap_setpcap,cap_linux_immutable,cap_net_bind_service,cap_net_broadcast,cap_net_admin,cap_net_raw,cap_ipc_lock,cap_ipc_owner,cap_sys_module,cap_sys_rawio,cap_sys_chroot,cap_sys_ptrace,cap_sys_pacct,cap_sys_admin,cap_sys_boot,cap_sys_nice,cap_sys_resource,cap_sys_time,cap_sys_tty_config,cap_mknod,cap_lease,cap_audit_write,cap_audit_control,cap_setfcap,cap_mac_override,cap_mac_admin,cap_syslog,cap_wake_alarm,cap_block_suspend,cap_audit_read
+Securebits: 00/0x0/1'b0
+ secure-noroot: no (unlocked)
+ secure-no-suid-fixup: no (unlocked)
+ secure-keep-caps: no (unlocked)
+ secure-no-ambient-raise: no (unlocked)
+uid=0(root)
+gid=0(root)
+groups=
+
+```
+
+*Dropping capabilities*
+
+We will drop the *chown capabilities* and try to change the ownership of a file
+
+```
+unshare -mipfnuUrC --mount-proc /sbin/capsh --drop=cap_chown  -- -c /bin/bash
+touch /tmp/test
+chown nobody /tmp/test
+```
+
+See, as expected you are not allowed to change the owner of the file you just created.
+
+Now, Try the following command and compare with the first exercise. 
+
+```
+unshare -mipfnuUrC --mount-proc /sbin/capsh --drop=cap_chown,cap_fowner,cap_fsetid,cap_kill,cap_setgid,cap_setuid,cap_setpcap,cap_net_bind_service,cap_net_broadcast,cap_net_admin,cap_net_raw,cap_ipc_lock,cap_ipc_owner,cap_sys_module,cap_sys_rawio,cap_sys_chroot,cap_sys_ptrace,cap_sys_pacct,cap_sys_admin,cap_sys_boot,cap_sys_nice,cap_sys_resource,cap_sys_time,cap_sys_tty_config,cap_mknod,cap_lease,cap_audit_write,cap_audit_control,cap_setfcap,cap_mac_override,cap_mac_admin,cap_syslog,cap_wake_alarm,cap_block_suspend,cap_audit_read  -- -c /bin/bash
+capsh --print
+```
+
+```
+Current: = cap_dac_override,cap_dac_read_search,cap_linux_immutable+ep
+Bounding set =cap_dac_override,cap_dac_read_search,cap_linux_immutable
+Ambient set =
+Securebits: 00/0x0/1'b0
+ secure-noroot: no (unlocked)
+ secure-no-suid-fixup: no (unlocked)
+ secure-keep-caps: no (unlocked)
+ secure-no-ambient-raise: no (unlocked)
+uid=0(root)
+gid=0(root)
+groups=
+```
+
+[NOTE]
+How to manage Linux Capabilities on OpenShift will be explained on : *Controlling what can be deployed within a Cluster* Chapter.
+
+== Deep Dive into Capabilities
+
+*chown*
+
+The man page describes chown as the ability to make arbitrary changes to file UIDs and GIDs. This means that root can change the ownership or group of any file system object. If you are not running a shell within a container and not installing packages into the container, you should drop this capability. I would make the argument this should never be needed in production. If you need to chown, allow the capability, do the work, then take it away.
+
+*dac_override*
+
+The man page says that dac_override allows root to bypass file read, write, and execute permission checks. DAC is an abbreviation of “discretionary access control”. This means a root capable process can read, write, and execute any file on the system, even if the permission and ownership fields would not allow it. Almost no apps need DAC_OVERRIDE, and if they do they are probably doing something wrong. There are probably less than ten in the whole distribution that actually need it. Of course the administrator shell could require DAC_OVERRIDE fixing bad permissions in the file system.
+Steve Grubb, security standards expert at Red Hat, says that “nothing should need this. If your container needs this, it’s probably doing something horrible.”
+
+*fowner*
+
+According to the man page, fowner conveys the ability to bypass permission checks on operations that normally require the file system UID of the process to match the UID of the file. For example, chmod and utime, and excludes operations covered by cap_dac_override and cap_dac_read_search. Here’s more from the man page:
+set extended file attributes (see chattr(1)) on arbitrary files; set Access Control Lists (ACLs) on arbitrary files; ignore directory sticky bit on file deletion; specify O_NOATIME for arbitrary files in open(2) and fcntl(2). This is similar to DAC_OVERRIDE, almost no applications need this other than, potentially, software installation tools. Most likely your container would run fine without this capability. You might need to allow this for a Docker build but it should be blocked when you run your container in production.
+
+*fsetid*
+
+The man page says “don’t clear set-user-ID and set-group-ID mode bits when a file is modified; set the set-group-ID bit for a file whose GID does not match the file* system or any of the supplementary GIDs of the calling process.”
+My take: If you are not running an installation, you probably do not need this capability. I would disable this one by default.
+
+*kill*
+
+If a process has this capability it can override the restriction that “the real or effective user ID, of a process sending a signal, must match the real or effective user ID of the process receiving the signal.”
+This capability basically means that a root-owned process can send kill signals to non-root processes. If your container is running all processes as root, or the root processes never kills processes running as non root, you do not need this capability. If you are running systemd as PID 1 inside of a container and you want to stop a container running with a different UID you might need this capability. It’s probably also worth mentioning on the danger scale, this one is on the low end.
+
+*setgid*
+
+The man page says that the setgid capability lets a process make arbitrary manipulations of process GIDs and supplementary GID list. It can also forge GID when passing socket credentials via UNIX domain sockets or write a group ID mapping in a user namespace. See user_namespaces(7) for more information. In short, a process with this capability can change its GID to any other GID. Basically allows full group access to all files on the system. If your container processes do not change UIDs/GIDs, they do not need this capability.
+
+*setuid*
+
+If a process has the setuid capability it can “make arbitrary manipulations of process UIDs (setuid(2), setreuid(2), setresuid(2), setfsuid(2)); forge UID when passing socket credentials via UNIX domain sockets; write a user ID mapping in a user namespace (see user_namespaces(7)).” A process with this capability can change its UID to any other UID. Basically, it allows full access to all files on the system. If your container processes do not change UIDs/GIDs always running as the same UID, preferably non root, they do not need this capability. Applications that need setuid usually start as root, in order to bind to ports below 1024 and then change their UIDS and drop capabilities. Apache binding to Port 80 requires net_bind_service, usually starting as root. It then needs setuid/setgid to switch to the apache user and drop capabilities. Most containers can safely drop setuid/setgid capability.
+
+*setpcap*
+
+Let’s look at the man page description: “Add any capability from the calling thread’s bounding set to its inheritable set; drop capabilities from the bounding set (via prctl(2) PR_CAPBSET_DROP); make changes to the secure bits flags.” In layman’s terms, a process with this capability can change its current capability set within its bounding set. Meaning a process could drop capabilities or add capabilities if it did not currently have them, but limited by the bounding set capabilities.
+
+*net_bind_service*
+
+This one’s easy. If you have this capability, you can bind to privileged ports (e.g., those below 1024). If you want to bind to a port below 1024 you need this capability. If you are running a service that listens to a port above 1024 you should drop this capability. The risk of this capability is a rogue process interpreting a service like sshd, and collecting users passwords. Running a container in a different network namespace reduces the risk of this capability. It would be difficult for the container process to get to the public network interface
+
+*net_raw*
+
+The man page says, “allow use of RAW and PACKET sockets. Allow binding to any address for transparent proxying.” This access allows a process to spy on packets on its network. That’s bad, right? Most container processes would not need this access so it probably should be dropped. Note this would only affect the containers that share the same network that your container process is running on, usually preventing access to the real network. RAW sockets also give an attacker the ability to inject scary things onto the network. Depending on what you are doing with the ping command, it could require this access.
+
+*sys_chroot*
+
+This capability allows use of chroot(). In other words, it allows your processes to chroot into a different rootfs. chroot is probably not used within your container, so it should be dropped.
+
+*mknod*
+
+If you have this capability, you can create special files using mknod. This allows your processes to create device nodes. Containers are usually provided all of the device nodes they need in /dev, the creation of device nodes is controlled by the device node cgroup, but I really think this should be dropped by default. Almost no containers ever do this, and even fewer containers should do this.
+
+*audit_write*
+
+If you have this one, you can write a message to kernel auditing log. Few processes attempt to write to the audit log (login programs, su, sudo) and processes inside of the container are probably not trusted. The audit subsystem is not currently namespace aware, so this should be dropped by default.
+
+*setfcap*
+
+Finally, the setfcap capability enables you to set file capabilities on a file system. Might be needed for doing installs during builds, but in production it should probably be dropped.

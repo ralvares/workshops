@@ -1,0 +1,97 @@
+= Running your own container from scratch.
+
+Let's put all of our new namespace skills to use.
+
+== Creating a Container
+
+=== Downloading a Container Image
+
+*Some Background*
+
+All of that is well and good. However, containers are great because they allow us to package and distribute software. All we've done is isolate some Linux processes.
+Containers get their root filesystem from a container image file. This is typically pulled from a registry. This file is, essentially, a TAR archive with the root filesystem contents and some metadata. Those contents are then made available to the running container through use of an Overlay Filesystem. 
+
+The Overlay Filesystem mechanism allows the container to use the files provided by the image and make ephemeral changes to those files. This is how Overlay Filesystems work. There are four directories: LOWER, UPPER, WORK, and MOUNT. The LOWER directory contains the filesystem's initial state. This is the contents of the container image and can be read only. The UPPER directory is where runtime changes will be stored and must be read/write. The WORK directory is where runtime changes are staged and must be read/write. Finally, the MOUNT directory is simply a directory where the OverlayFS is mounted and presented as a single filesystem. This is the directory we will chroot our container into.
+
+```
+adduser rootless
+su - rootless
+curl https://kojipkgs.fedoraproject.org//packages/Fedora-Container-Base/31/20200426.0/images/Fedora-Container-Base-31-20200426.0.x86_64.tar.xz -o Fedora-Container-Base-31-20200426.0.x86_64.tar.xz
+mkdir Fedora
+tar -xJvf Fedora-Container-Base-31-20200426.0.x86_64.tar.xz -C Fedora
+```
+
+== What's in an Image
+
+An Image usually get stashed away in /var/lib/containers and you interact with them only through the orchestration of your container engine. 
+
+Today we will change all that. We have downloaded the fedora:31 image and saved it to a folder called Fedora. Change into this directory and list the contents.
+
+```
+ls -la Fedora
+```
+
+```
+total 12
+drwxr-xr-x. 2 root root    6 Apr 26 11:08 .
+dr-xr-x---. 2 root root   27 Apr 26 09:36 ..
+drwxr-xr-x. 2 root root   50 Apr 26 05:48 852ade322fd94e2f815bc765551d81c01d85fc05a6dd9124ba1929e57b1f52c2
+-rw-r--r--. 1 root root 1316 Apr 26 05:48 e17a9754ae474f5312f21bdaf150884e2149c53c080e163f64adde27d1cf6a13.json
+-rw-r--r--. 1 root root  242 Apr 26 05:48 manifest.json
+-rw-r--r--. 1 root root  126 Apr 26 05:48 repositories
+```
+
+Now let's extract the contents of the layer.
+
+```
+mkdir chroot
+tar xvf Fedora/852ade322fd94e2f815bc765551d81c01d85fc05a6dd9124ba1929e57b1f52c2/layer.tar -C chroot/
+```
+
+Now, List the content of the chroot
+
+```
+ls -la chroot
+```
+
+What we have just extracted is a Fedora 31 system's root filesystem!
+
+Let's add a chroot to our namespace skills to create a container.
+
+On the first Terminal run the following commands.
+
+```
+adduser rootless
+su - rootless
+unshare -mipfnuUr --mount-proc chroot chroot /bin/bash
+cat /etc/redhat-release
+```
+
+Mount tmpfs,sysfs and proc
+
+```
+mount -t tmpfs none /tmp
+mount -t sysfs none /sys
+mount -t proc none /proc
+```
+
+On the second Terminal run the following command:
+
+```
+su - rootless
+slirp4netns -c $(pgrep -u rhel rootless) eth0
+```
+
+Back to Terminal 1, configure DNS and check the internet access :D
+
+```
+echo 'nameserver 8.8.8.8' > /etc/resolv.conf
+curl www.google.com
+```
+
+And there we have it. A Fedora container! Feel free to poke around the container a bit. Because the Fedora image is very barebones, you won't be able to do much. 
+Type exit when you are done.
+
+We have now created a fully isolated environment on our system by only using namespaces!
+
+Feel free to play around in your sandbox and type exit when you are done

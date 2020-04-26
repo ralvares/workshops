@@ -1,0 +1,93 @@
+= Network Namespace
+
+== Background
+
+The networking namespace in the Kernel is actually responsible for a surprisingly large number of things. It keeps tabs on all the network interfaces and their state, routing tables, firewall rules, etc. All of these things are explored using the ip command. This command allows root to view and modify the networking stack.
+
+The hostname of the machine is stored in a few places. First, the Kernel tracks the machine's hostname. Next, the /etc/hostname file stores the statically defined hostname. Finally, a hostname can be derived from DHCP and DNS. What is important to note is that the hostnamectl command will change the hostname value in the Kernel and the value in /etc/hostname. Because our sandbox is using the same filesystem as our host, this is not desirable. Instead of using hostnamectl to manipulate the hostname, we will only use the hostname command as it only changes the Kernel's value.
+
+== Network and UTS Namespaces
+
+The Network Namespace allows a new network stack to exist in the sandbox. This means our sandboxed environment can have its own network interfaces, routing tables, DNS lookup servers, IP addresses, subnets... you name it!
+
+Let's create a sandbox with a new Network and UTS Namespace.
+
+```
+unshare -nu /bin/bash
+```
+
+- n creates a new Networking Namespace
+- u creates a new UTS Namespace
+
+What network interfaces are available to our sandbox?
+
+```
+ip a
+```
+
+Just the loopback. Good news, our network namespace worked! Bad news, we can't reach the internet. Keep this issue in mind, we will revisit it later.
+
+Now let's change our hostname.
+
+```
+hostname sandbox
+hostname
+```
+
+Now our sandbox environment can operate a full networking stack independent of the host it lives one.
+On the terminal that is in the new namespaces, type exit to return to the native namespaces.
+
+= Rootless Container Network
+
+== Background
+
+The Linux Kernel provides many useful primitives that can be used to construct very intricate network configurations. They are very flexible and powerful. Of particular interest today are Virtual Ethernet Adapters, Bridges, and Taps.
+
+A Virtual Ethernet Adapter operates in the Kernel exactly the way a physical NIC would. The only difference is that instead of receiving data from a physical device, a virtual adapter receives data from another network adapter in the stack.
+
+A Bridge is a device that will connect multiple interfaces and allow traffic to blindly route between them. It is like a router, but with far less smarts.
+Finally a Tap is very similar to a Virtual Ethernet Adapter except that it receives data from a program in user space rather than a device in Kernel space. This means that taps can be created and managed by non-privileged users.
+
+== Container Network Devices
+
+When a container initiates a new Network Namespace, it will have no network devices available to it. In order to get network connectivity to the container, we need to add devices to the container's network namespace from the host. Traditionally, when we run containers as the root user, we will create a virtual adapter and attach it to the container's network namespace as eth0. The virtual adapter then joins a bridge that is shared with the host's physical network interface. The bridge will have its own subnet that is unique from the host's physical network and the bridge will handle routing traffic from the internal subnet to the network.
+
+This model uses all Kernel native networking primitives. This is great for efficiency and speed. However, none of these devices can be created by a non-root user.
+
+When we create a container as a non-root user, we have to do something slightly different. We use an application called *slirp4netns*. This application creates a tap inside the container's network namespace and attaches to it. The application then handles traffic routing much the same way the bridge would, except in user space.
+
+== Let's get started
+
+Creating a Sandbox
+
+1 - On the first Terminal:  Create user/network/mount namespaces
+
+```
+adduser rootless
+su - rootless
+unshare --user --map-root-user --net --mount-proc --pid --fork
+```
+
+Nothing new in this step. 
+
+2 - On the second terminal: Start slirp4netns
+
+First, We need to install slirp4netns
+
+```
+dnf install slirp4netns
+```
+
+```
+su - rootless
+slirp4netns -c $(pgrep -u rootless unshare) eth0
+```
+
+3 - On the first terminal: Make sure eth0 is configured and connected to the internet
+
+```
+ip a
+curl http://www.google.com
+```
+
+Look at that! It created and configured our eth0 network adapter!

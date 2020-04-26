@@ -1,0 +1,28 @@
+= Mount Namespace
+
+The Mount Namespace is the part of the Kernel that stores the mount table. 
+When our sandboxed environment runs in a new Mount Namespace, it can mount file systems not present on the host.
+
+We are going to create a new mount namespace and start a Bash shell inside that namespace.
+
+- The -m flag tells unshare that we would like a new Mount Namespace
+- /bin/bash tells unshare what program to run after creating the new namespace
+
+```
+unshare -m /bin/bash
+mount -t tmpfs tmpfs /mnt
+mount | grep mnt
+```
+
+If you switch to another terminal, one that is in the native namespaces, running the mount command will show nothing mounted to /mnt.
+
+On the terminal that is in the new mount namespace, let's create a file.
+
+```
+date > /mnt/test
+cat /mnt/test
+```
+
+If you switch to the other terminal in the native namespaces, look for our new file at /mnt/test and you should see that it does not exist outside of our sandbox. 
+
+On the terminal that is in the new mount namespace, type exit to return to the native namespaces.

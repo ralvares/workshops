@@ -1,0 +1,57 @@
+== About This WorkShop
+
+This workshop provides a high-level walkthrough of the OpenShift security measures, including solutions for the host layer, the
+container and orchestration layer, and the build and application layer. 
+
+
+== Introduction
+
+Securing containers is a lot like securing any running process. You need to think about security
+throughout the layers of the solution stack before you deploy and run your container. You also need
+to think about security throughout the application and container life cycle.
+
+This workshop will cover the following topics:
+
+- Container Host & Multi Tenancy.
+- Trusted Sources.
+- Secure Access to Container Images.
+- Security and the Build Process.
+- Controling what can be deployed within a cluster.
+- Securing the container Platform.
+- Network Security for Apps on Openshift.
+- Secure the Data.
+- API Management and SSO.
+- Introduction to GitOPS.
+
+== What Are Containers?
+
+Containers have broad appeal because they allow users to easily package an application, and
+all its dependencies, into a single image that can be promoted from development, to test, and
+to production — without change. Containers make it easy to ensure consistency across environ-
+ments and multiple deployment targets like physical servers, virtual machines (VMs), and private
+or public clouds. This helps teams more easily develop and manage the applications that deliver
+business value.
+
+Some of the benefits of using containers include:
+
+[options="header",frame="all",grid="none"]
+|===
+|INFRASTRUCTURE |APPLICATIONS
+
+|Sandboxed application processes on a shared Linux OS kernel
+|Package my application and all of its dependencies
+
+|Simpler, lighter, and denser than virtual machines
+|Deploy to any environment in seconds and enable CI/CD
+
+|Portable across different environments
+|Easily access and share containerized components
+|===
+
+== Container Security in OpenShift
+
+This workshop describes the key elements of security for each layer of the
+container solution stack, while also showing how OpenShift can be used to
+to create, deploy, and manage containers at scale, with security in mind at
+every stage and every layer.
+

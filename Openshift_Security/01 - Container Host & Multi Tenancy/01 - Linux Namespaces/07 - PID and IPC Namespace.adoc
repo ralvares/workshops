@@ -1,0 +1,70 @@
+= PID and IPC Namespaces
+
+== The PID Basics
+
+It is good to have some background on how PIDs in Linux work. Every process that runs on a Linux system gets a Process ID (PID). 
+This exists as a 32-bit integer. Numbering starts at 1 and increments until there are none left. PIDs can be reused once the process terminates.
+Processes are structured in a Tree Structure. Every process has a parent except the first process. Typically the init system will be PID 1 and has no parent. When you have an active bash shell and you run a program, it starts as a child of the bash shell. The act of spawning a child process is called forking because the process splits, like a fork in the road.
+
+You can visualize the process tree with the ps command.
+
+```
+ps aux
+```
+
+```
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.0   6008  3844 pts/0    Ss   09:03   0:00 /bin/bash
+root        59  0.0  0.0   6008  3840 pts/1    Ss+  09:05   0:00 /bin/bash
+root       132  0.0  0.0   7784  3364 pts/0    R+   09:18   0:00 ps aux
+```
+
+== PID and IPC Namespaces
+
+The PID namespace allows a process and its children to run in a new process tree that maps back to the host process tree. 
+The new PID namespace starts with PID 1 which will map to a much higher PID in the host's native PID namespace. 
+The Inter-Process Communication (IPC) Namespace limits the processes ability to share memory.
+
+First, Let's make a new PID namespace.
+
+```
+unshare -mipf
+```
+
+That's a lof more flags this time.
+- m creates a new mount namespace 
+- i creates a new IPC namespace
+- p creates a new PID namespace
+- f tells unshare to fork after creating the new namespaces and before starting Bash
+
+It is very important that we fork anytime we create a new PID namespace. The reason is because a new PID table is created, but the current process is still in the old namespace. If we run a Bash shell, it will not be able to look up its own PID.
+
+Now let's inspect the current PID.
+
+```
+echo $$
+```
+
+Look at that! Ever run a Bash shell as PID 1? Probably not. Since we are running in an isolated PID namespace.
+
+Let's list the processes:
+
+```
+ps aux
+```
+
+Why is ps reporting the "unshare -mipf" process ? It looks like ps is referencing the native PID namespace. Indeed it is! The Linux Kernel uses the /proc pseudo filesystem to report raw data on processes. Since we created a new PID namespace, we need to mount a new /proc that matches this new namespace.
+
+```
+mount -t proc none /proc
+```
+
+So that is why we needed the switch the mount namespace! Ok, now lets list our processes again.
+
+```
+ps aux
+```
+
+Now that's more like it!
+
+On the terminal that is in the new namespaces, type exit to return to the native namespaces.

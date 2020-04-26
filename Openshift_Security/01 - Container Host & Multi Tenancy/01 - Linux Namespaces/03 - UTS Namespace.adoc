@@ -1,0 +1,27 @@
+= UTS Namespace
+
+The Unix Time Sharing (UTS) Namespace exists solely for storing the system's hostname. Seriously. A whole namespace to store one string. 
+This namespace has a long history and has changed quite a bit along the way. It exists the way it is for historical reasons.
+
+Let's create a sandbox with a new UTS Namespace.
+
+```
+unshare -u /bin/bash
+```
+
+Now let's change our hostname.
+
+```
+hostname sandbox
+hostname
+```
+
+Cool! That worked exactly as expected. But what is the hostname on our host? 
+Switch terminals to one that is in the native namespaces and check.
+
+```
+hostname
+```
+
+It is unchanged! 
+On the terminal that is in the new namespaces, type exit to return to the native namespaces.

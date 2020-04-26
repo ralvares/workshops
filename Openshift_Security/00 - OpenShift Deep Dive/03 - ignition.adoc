@@ -1,0 +1,289 @@
+== About Ignition
+
+Ignition is the utility that is used by RHCOS to manipulate disks during
+initial configuration. It completes common disk tasks, including partitioning
+disks, formatting partitions, writing files, and configuring users. On first
+boot, Ignition reads its configuration from the installation media or the
+location that you specify and applies the configuration to the machines.
+
+Whether you are installing your cluster or adding machines to it, Ignition
+always performs the initial configuration of the OpenShift Container Platform
+cluster machines. Most of the actual system setup happens on each machine
+itself. For each machine,
+Ignition takes the RHCOS image and boots the RHCOS kernel. Options
+on the kernel command line, identify the type of deployment and the location of
+the Ignition-enabled initial Ram Disk (initramfs).
+
+
+=== How Ignition works
+
+To create machines by using Ignition, you need Ignition config files. The
+OpenShift Container Platform installation program creates the Ignition config files that you
+need to deploy your cluster. These files are based on the information that you
+provide to the installation program directly or through an `install-config.yaml`
+file.
+
+The way that Ignition configures machines is similar to how tools like
+https://cloud-init.io/[cloud-init] or Linux Anaconda
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/installation_guide/index#chap-kickstart-installations[kickstart]
+configure systems, but with some important differences:
+
+
+* Ignition runs from an initial RAM disk that is separate
+from the system you are installing to. Because of that, Ignition can
+repartition disks, set up file systems, and perform other changes to the
+machine’s permanent file system. In contrast, cloud-init runs as part of a
+machine’s init system when
+the system boots, so making foundational changes to things like disk partitions
+cannot be done as easily. = Viewing Ignition configuration files
+
+To see the Ignition config file used to deploy the bootstrap machine, run the
+following command:
+
+----
+$ openshift-install create ignition-configs --dir $HOME/testconfig
+----
+
+After you answer a few questions, the `bootstrap.ign`, `master.ign`, and
+`worker.ign` files appear in the directory you entered.
+
+To see the contents of the `bootstrap.ign` file, pipe it through the `jq` filter.
+Here’s a snippet from that file:
+
+----
+$ cat $HOME/testconfig/bootstrap.ign | jq
+\\{
+  "ignition": \\{
+        "config": \\{},
+  "storage": \\{
+        "files": [
+          \\{
+            "filesystem": "root",
+            "path": "/etc/motd",
+            "user": \\{
+              "name": "root"
+            },
+            "append": true,
+            "contents": \\{
+              "source": "data:text/plain;charset=utf-8;base64,VGhpcyBpcyB0aGUgYm9vdHN0cmFwIG5vZGU7IGl0IHdpbGwgYmUgZGVzdHJveWVkIHdoZW4gdGhlIG1hc3RlciBpcyBmdWxseSB1cC4KClRoZSBwcmltYXJ5IHNlcnZpY2UgaXMgImJvb3RrdWJlLnNlcnZpY2UiLiBUbyB3YXRjaCBpdHMgc3RhdHVzLCBydW4gZS5nLgoKICBqb3VybmFsY3RsIC1iIC1mIC11IGJvb3RrdWJlLnNlcnZpY2UK",
+----
+
+To decode the contents of a file listed in the `bootstrap.ign` file, pipe the
+base64-encoded data string representing the contents of that file to the `base64
+-d` command. Here’s an example using the contents of the `/etc/motd` file added to
+the bootstrap machine from the output shown above:
+
+----
+$ echo VGhpcyBpcyB0aGUgYm9vdHN0cmFwIG5vZGU7IGl0IHdpbGwgYmUgZGVzdHJveWVkIHdoZW4gdGhlIG1hc3RlciBpcyBmdWxseSB1cC4KClRoZSBwcmltYXJ5IHNlcnZpY2UgaXMgImJvb3RrdWJlLnNlcnZpY2UiLiBUbyB3YXRjaCBpdHMgc3RhdHVzLCBydW4gZS5nLgoKICBqb3VybmFsY3RsIC1iIC1mIC11IGJvb3RrdWJlLnNlcnZpY2UK | base64 -d
+
+This is the bootstrap machine; it will be destroyed when the master is fully up.
+
+The primary service is "bootkube.service". To watch its status, run, e.g.:
+
+journalctl -b -f -u bootkube.service
+----
+
+Repeat those commands on the `master.ign` and `worker.ign` files to see the source
+of Ignition config files for each of those machine types.  You should see a line
+like the following for the `worker.ign`, identifying how it gets its Ignition
+config from the bootstrap machine:
+
+----
+"source": "https://api.myign.develcluster.example.com:22623/config/worker",
+----
+
+Here are a few things you can learn from the `bootstrap.ign` file: +
+
+* Format: The format of the file is defined in the
+https://github.com/coreos/ignition/tree/spec2x[Ignition config spec].
+Files of the same format are used later by the MCO to merge changes into a
+machine’s configuration.
+* Contents: Because the bootstrap machine serves the Ignition configs for other
+machines, both master and worker machine Ignition config information is stored in the
+`bootstrap.ign`, along with the bootstrap machine’s configuration.
+* Size: The file is more than 1300 lines long, with path to various types of resources.
+* The content of each file that will be copied to the machine is actually encoded
+into data URLs, which tends to make the content a bit clumsy to read. (Use the
+  jq and base64 commands shown previously to make the content more readable.)
+* Configuration: The different sections of the Ignition config file are generally
+ meant to contain files that are just dropped into a machine’s file system, rather
+ than commands to modify existing files. For example, instead of having a section
+ on NFS that configures that service, you would just add an NFS configuration
+ file, which would then be started by the init process when the system comes up.
+* users: A user named core is created, with your ssh key assigned to that user.
+This allows you to log in to the cluster with that user name and your
+credentials.
+* storage: The storage section identifies files that are added to each machine. A
+few notable files include `/root/.docker/config.json` (which provides credentials
+  your cluster needs to pull from container image registries) and a bunch of
+  manifest files in `/opt/openshift/manifests` that are used to configure your cluster.
+* systemd: The systemd section holds content used to create systemd unit files.
+Those files are used to start up services at boot time, as well as manage those
+services on running systems.
+* Primitives: Ignition also exposes low-level primitives that other tools can
+build on.
+With cloud-init, it is also difficult to reconfigure
+the boot process while you are in the middle of the node's boot process.
+
+* Ignition is meant to initialize systems, not change existing systems. After a
+machine initializes and the kernel is running from the installed system, the
+Machine Config Operator from the OpenShift Container Platform cluster completes all future
+machine configuration.
+
+* Instead of completing a defined set of actions, Ignition implements
+a declarative configuration. It checks that all partitions, files, services,
+and other items are in place before the new machine starts. It then makes the
+changes, like copying files to disk that are necessary for the new machine to
+meet the specified configuration.
+
+* After Ignition finishes configuring a machine, the kernel keeps running but
+discards the initial RAM disk and pivots to the installed system on disk. All of
+the new system services and other features start without requiring a system
+reboot.
+
+* Because Ignition confirms that all new machines meet the declared configuration,
+you cannot have a partially-configured machine. If a machine’s setup fails,
+the initialization process does not finish, and Ignition does not start the new
+machine. Your cluster will never contain partially-configured machines. If
+Ignition cannot complete, the machine is not added to the cluster. You must add
+a new machine instead. This behavior prevents the difficult case of debugging a machine when the results of a
+failed configuration task are not known until something that depended on it
+fails at a later date.
+
+* If there is a problem with an
+Ignition config that causes the setup of a machine to fail, Ignition will not try
+to use the same config to set up another machine. For example, a failure could
+result from an Ignition config made up of a parent and child config that both
+want to create the same file. A failure in such a case would prevent that
+Ignition config from being used again to set up an other machines, until the
+problem is resolved.
+
+* If you have multiple Ignition config files, you get a union of that set of
+configs.  Because Ignition is declarative, conflicts between the configs could
+cause Ignition to fail to set up the machine. The order of information in those
+files does not matter. Ignition will sort and implement each setting in ways that
+ make the most sense. For example, if a file needs a directory several levels
+ deep, if another file needs a directory along that path, the later file is
+ created first. Ignition sorts and creates all files, directories, and
+ links by depth.
+
+* Because Ignition can start with a completely empty hard disk, it can do
+something cloud-init can’t do: set up systems on bare metal from scratch
+(using features such as PXE boot). In the bare metal case, the Ignition config
+is injected into the boot partition so Ignition can find it and configure
+the system correctly.
+
+
+=== The Ignition sequence
+
+The Ignition process for an RHCOS machine in an OpenShift Container Platform cluster
+involves the following steps:
+
+* The machine gets its Ignition config file. Master machines get their Ignition
+config files from the bootstrap machine, and worker machines get Ignition config
+files from a master.
+* Ignition creates disk partitions, file systems, directories, and links on the
+machine. It supports RAID arrays but does not support LVM volumes
+* Ignition mounts the root of the permanent file system to the `/sysroot`
+directory in the
+initramfs and starts working in that `/sysroot` directory.
+* Ignition configures all defined file systems and sets them up to mount appropriately
+at runtime.
+* Ignition runs `systemd` temporary files to populate required files in the
+`/var` directory.
+* Ignition runs the Ignition config files to set up users, systemd unit files,
+and other configuration files.
+* Ignition unmounts all components in the permanent system that were mounted in
+the initramfs.
+* Ignition starts up new machine’s init process which, in turn, starts up all other
+services on the machine that run during system boot.
+
+The machine is then ready to join the cluster and does not require a reboot.
+
+= Viewing Ignition configuration files
+
+To see the Ignition config file used to deploy the bootstrap machine, run the
+following command:
+
+----
+$ openshift-install create ignition-configs --dir $HOME/testconfig
+----
+
+After you answer a few questions, the `bootstrap.ign`, `master.ign`, and
+`worker.ign` files appear in the directory you entered.
+
+To see the contents of the `bootstrap.ign` file, pipe it through the `jq` filter.
+Here’s a snippet from that file:
+
+----
+$ cat $HOME/testconfig/bootstrap.ign | jq
+\\{
+  "ignition": \\{
+        "config": \\{},
+  "storage": \\{
+        "files": [
+          \\{
+            "filesystem": "root",
+            "path": "/etc/motd",
+            "user": \\{
+              "name": "root"
+            },
+            "append": true,
+            "contents": \\{
+              "source": "data:text/plain;charset=utf-8;base64,VGhpcyBpcyB0aGUgYm9vdHN0cmFwIG5vZGU7IGl0IHdpbGwgYmUgZGVzdHJveWVkIHdoZW4gdGhlIG1hc3RlciBpcyBmdWxseSB1cC4KClRoZSBwcmltYXJ5IHNlcnZpY2UgaXMgImJvb3RrdWJlLnNlcnZpY2UiLiBUbyB3YXRjaCBpdHMgc3RhdHVzLCBydW4gZS5nLgoKICBqb3VybmFsY3RsIC1iIC1mIC11IGJvb3RrdWJlLnNlcnZpY2UK",
+----
+
+To decode the contents of a file listed in the `bootstrap.ign` file, pipe the
+base64-encoded data string representing the contents of that file to the `base64
+-d` command. Here’s an example using the contents of the `/etc/motd` file added to
+the bootstrap machine from the output shown above:
+
+----
+$ echo VGhpcyBpcyB0aGUgYm9vdHN0cmFwIG5vZGU7IGl0IHdpbGwgYmUgZGVzdHJveWVkIHdoZW4gdGhlIG1hc3RlciBpcyBmdWxseSB1cC4KClRoZSBwcmltYXJ5IHNlcnZpY2UgaXMgImJvb3RrdWJlLnNlcnZpY2UiLiBUbyB3YXRjaCBpdHMgc3RhdHVzLCBydW4gZS5nLgoKICBqb3VybmFsY3RsIC1iIC1mIC11IGJvb3RrdWJlLnNlcnZpY2UK | base64 -d
+
+This is the bootstrap machine; it will be destroyed when the master is fully up.
+
+The primary service is "bootkube.service". To watch its status, run, e.g.:
+
+journalctl -b -f -u bootkube.service
+----
+
+Repeat those commands on the `master.ign` and `worker.ign` files to see the source
+of Ignition config files for each of those machine types.  You should see a line
+like the following for the `worker.ign`, identifying how it gets its Ignition
+config from the bootstrap machine:
+
+----
+"source": "https://api.myign.develcluster.example.com:22623/config/worker",
+----
+
+Here are a few things you can learn from the `bootstrap.ign` file: +
+
+* Format: The format of the file is defined in the
+https://github.com/coreos/ignition/tree/spec2x[Ignition config spec].
+Files of the same format are used later by the MCO to merge changes into a
+machine’s configuration.
+* Contents: Because the bootstrap machine serves the Ignition configs for other
+machines, both master and worker machine Ignition config information is stored in the
+`bootstrap.ign`, along with the bootstrap machine’s configuration.
+* Size: The file is more than 1300 lines long, with path to various types of resources.
+* The content of each file that will be copied to the machine is actually encoded
+into data URLs, which tends to make the content a bit clumsy to read. (Use the
+  jq and base64 commands shown previously to make the content more readable.)
+* Configuration: The different sections of the Ignition config file are generally
+ meant to contain files that are just dropped into a machine’s file system, rather
+ than commands to modify existing files. For example, instead of having a section
+ on NFS that configures that service, you would just add an NFS configuration
+ file, which would then be started by the init process when the system comes up.
+* users: A user named core is created, with your ssh key assigned to that user.
+This allows you to log in to the cluster with that user name and your
+credentials.
+* storage: The storage section identifies files that are added to each machine. A
+few notable files include `/root/.docker/config.json` (which provides credentials
+  your cluster needs to pull from container image registries) and a bunch of
+  manifest files in `/opt/openshift/manifests` that are used to configure your cluster.
+* systemd: The systemd section holds content used to create systemd unit files.
+Those files are used to start up services at boot time, as well as manage those
+services on running systems.
+* Primitives: Ignition also exposes low-level primitives that other tools can
+build on.

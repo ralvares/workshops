@@ -1,0 +1,33 @@
+= SELinux
+
+SELinux is primarily a labeling system that assigns a label (name) to every
+process and system object. This allows every aspect of kernel operations to be
+first labeled, second classified, and then ultimately enforced by a set of
+rules that the provider maintains.
+
+BENEFITS OF RUNNING SELINUX
+
+- All processes and files are labeled with a type. A type defines a domain for
+processes, and a type for files. Processes are separated from each other by
+running in their own domains, and SELinux policy rules define how processes
+interact with files, as well as how processes interact with each other. Access
+is only allowed if an SELinux policy rule exists that specifically allows it.
+- Fine-grained access control. Stepping beyond traditional UNIX permissions
+that are controlled at user discretion and based on Linux user and group IDs,
+SELinux access decisions are based on all available information, such as an
+SELinux user, role, type, and, optionally, a level.
+- SELinux policy is administratively-defined, enforced system-wide, and is not
+set at user discretion.
+- SELinux can be used to enforce data confidentiality and integrity, as well as
+protecting processes from untrusted inputs.
+- Reduced vulnerability to privilege escalation attacks. SELinux policy rules
+define how processes access files and other processes. If a process is
+compromised, the attacker only has access to the normal functions of that
+process, and to files the process has been configured to have access to.
+
+_For example, if the Apache HTTP Server is compromised, an attacker cannot use
+that process to read files in user home directories, unless a specific SELinux
+policy rule was added or configured to allow such access._
+
+[NOTE]
+How to use SELinux on OpenShift will be explained on: *Controlling what can be deployed within a Cluster* Chapter.

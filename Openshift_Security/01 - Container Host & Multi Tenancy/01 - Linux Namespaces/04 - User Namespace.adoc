@@ -1,0 +1,66 @@
+= User Namespace
+
+== History
+
+The User Namespace is easily the newest namespace in the Linux Kernel. It was introduced to allow non-root users to run containers without a heavy root daemon. Typically, a non-privileged user cannot spawn new namespaces. However, if a new User Namespace is created, then that same user can now spawn any type of namespace. 
+Since this feature was introduced in the Kernel, you have seen newer container images come out that do not rely on daemons because they are no longer necessary.
+
+== User Namespace
+
+The User Namespaces allow our sandboxed environment to have its own set of user and group IDs that will map to very high, unique, user and group IDs back on the host system. They also allow the root user in the sandbox to be mapped to another user on the host.
+Because we are now invoking the User Namespace, we no longer need to work as root.
+
+Let's switch to a non-privileged user.
+
+
+```
+adduser nonroot
+su - nonroot
+```
+
+Now let's unshare some namespaces!
+
+```
+unshare -Ur /bin/bash
+whoami
+```
+
+Wait... We are root again? I thought we just left root!
+
+Well... yes and no. Inside of our sandbox, we are the root user, but we have instructed unshare to map the root user to our actual UID outside the sandbox. 
+That is what the *r* option does. The *U* option creates the new User Namespace.
+
+To inspect how UIDs are being mapped, we can query the Kernel state.
+
+```
+cat /proc/self/uid_map
+```
+
+This tells us that root (UID 0) is mapped to _nonroot_ (UID 1001) and a span of 1 UID is available for mapping. 
+
+Tet's test the limits of our root powers. If we were *root*, we could do some pretty destructive things... Like delete Bash! Go back to the terminal that is in your sandbox.
+
+```
+rm -f /bin/bash
+```
+
+However, since we are not root outside of the sandbox, we cannot remove files owned by the real root outside of the sandbox.
+
+Let's do another test.
+
+```
+date > /tmp/test
+ls -la /tmp/test
+```
+
+Makes sense. We are root so the files we create are owned by root. But lets leave our sandbox and check that same file in the host's native namespace. 
+Run the following commands on a terminal that is not in your sandbox.
+
+```
+ls -la /tmp/test
+```
+
+So root in the sandbox made the file. Root in the sandbox is mapped to nonroot outside the sandbox. 
+So, outside the sandbox nonroot owns the file! This means that, as an admin, I can allow users to run containers on my systems without the fear of them becoming root on the host! 
+
+*Security win!*

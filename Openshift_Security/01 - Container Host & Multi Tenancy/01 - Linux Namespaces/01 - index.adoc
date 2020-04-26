@@ -1,0 +1,22 @@
+= Containers
+
+If you understand Linux, you probably already have 85% of the knowledge you need to understand containers. If you understand how processes, mounts, networks , shells and daemons work - commands like ps, mount, ip addr, bash, httpd and mysqld - then you just need to understand a few extra primitives to become an expert with containers. 
+
+Linux containers and the underlying features which power them offer an entire ecosystem of software. 
+Various pieces form the ability to build a operating system jail or application sandbox, or to simply better package applications. 
+This can all be done while offering extremely low re-source overhead and many features typically restricted to hardware virtualization such as snapshots, 
+pausing virtual machines (VMs) or live VM migration. 
+
+Linux kernel namespaces, capabilities and resource limits via cgroups offer excellent tools for building defense in depth, a strongly encouraged security paradigm for all types of applications. 
+
+From web applications and network services to desktop applications and thick clients, many of the container methods or software discussed within this paper also support different versions of the Linux kernel on almost any supported hardware. This can offer much needed security improvements in embedded or Internet of Things (IoT) devices. Finally, Mandatory Access Controls (MAC) and system call (syscall) filtering, given new life by container deployments, offer additional and formidable protections against application or container to host compromise.
+
+
+== Overview
+
+We will begin with a fast overview of how different Linux utilities work together to create a sandboxed environment and run a container. 
+We will then step through Linux Namespaces, Capabilities and explore how they work. 
+Finally, we will put all of our acquired knowledge together to run a container as a standard user without a container runtime. 
+
+*No Podman or Docker!*
+

@@ -1,0 +1,6 @@
+= SECCOMP
+
+Think of a SECCOMP as a firewall which can be configured to block certain system calls. 
+
+[NOTE]
+How  to configure Seccomps profiles on Openshift will be explained on : *Controlling what can be deployed within a Cluster* Chapter.
