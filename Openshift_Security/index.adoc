@@ -21,7 +21,7 @@ This workshop will cover the following topics:
 - Network Security for Apps on Openshift.
 - Secure the Data.
 - API Management and SSO.
-- Introduction to GitOPS.
+- Introduction to Gitops.
 
 == Security in OpenShift
 
