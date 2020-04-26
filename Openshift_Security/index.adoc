@@ -23,6 +23,13 @@ This workshop will cover the following topics:
 - API Management and SSO.
 - Introduction to GitOPS.
 
+== Security in OpenShift
+
+This workshop describes the key elements of security for each layer of the
+container solution stack, while also showing how OpenShift can be used to
+to create, deploy, and manage containers at scale, with security in mind at
+every stage and every layer.
+
 == What Are Containers?
 
 Containers have broad appeal because they allow users to easily package an application, and
@@ -47,11 +54,3 @@ Some of the benefits of using containers include:
 |Portable across different environments
 |Easily access and share containerized components
 |===
-
-== Container Security in OpenShift
-
-This workshop describes the key elements of security for each layer of the
-container solution stack, while also showing how OpenShift can be used to
-to create, deploy, and manage containers at scale, with security in mind at
-every stage and every layer.
-
