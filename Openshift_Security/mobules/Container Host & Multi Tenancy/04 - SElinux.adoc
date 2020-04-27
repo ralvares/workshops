@@ -27,7 +27,4 @@ process, and to files the process has been configured to have access to.
 
 _For example, if the Apache HTTP Server is compromised, an attacker cannot use
 that process to read files in user home directories, unless a specific SELinux
-policy rule was added or configured to allow such access._
-
-[NOTE]
-How to use SELinux on OpenShift will be explained on: *Controlling what can be deployed within a Cluster* Chapter.
+policy rule was added or configured to allow such access.

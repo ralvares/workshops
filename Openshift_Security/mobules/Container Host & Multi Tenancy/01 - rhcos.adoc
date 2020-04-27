@@ -6,22 +6,40 @@ that created Red Hat Enterprise Linux Atomic Host and CoreOS Container Linux,
 RHCOS combines the quality standards of Red Hat Enterprise Linux (RHEL)
 with the automated, remote upgrade features from Container Linux.
 
-RHCOS is supported only as a component of OpenShift Container Platform for all OpenShift Container Platform machines. 
-RHCOS is the only supported operating system for OpenShift Container Platform control plane, or master,
-machines. While RHCOS is the default operating system for all cluster
-machines, you can create compute machines, which are also known as worker machines, that use RHEL as their
-operating system. There are two general ways RHCOS is deployed in
-OpenShift Container Platform:
+== How Containers are Secured on Red Hat Enterprise Linux CoreOS
 
-* If you install your cluster on infrastructure that the cluster provisions,
-RHCOS images are downloaded to the target platform during installation,
-and suitable Ignition config files, which control the RHCOS configuration,
-are used to deploy the machines.
+Containers enable you to simplify multi-tenancy deployments by deploying
+multiple applications on a single host, using the kernel and the container runtime
+to spin up each container.
 
-* If you install your cluster on infrastructure
-that you manage, you must follow the installation documentation to obtain the
-RHCOS images, generate Ignition config files, and use the Ignition config
-files to provision your machines.
+You must have an operating system (OS) that can secure the host kernel and
+secure containers from each other. In Linux, containers are just a special type
+of process, so securing containers is the same as securing any running process.
+Containers should run as a *non-root user*. *Dropping the privilege level or
+creating containers with the least amount of privileges possible is recommended*.
+
+Because OpenShift runs on RHCOS and RHEL, the following concepts apply by default to any deployed
+cluster and are at the core of what make containers secure on the platform.
+
+- _Linux namespaces_ enable creating an abstraction of a particular global system
+resource to make it appear as a separate instance to processes within a
+namespace. Consequently, several containers can use the same resource
+simultaneously without creating a conflict.
+
+- _SELinux_ provides an additional layer of security to keep containers isolated
+from each other and from the host. SELinux allows administrators to enforce
+mandatory access controls (MAC) for every user, application, process, and file.
+
+- _CGroups_ (control groups) limit, account for, and isolate the resource usage
+(CPU, memory, disk I/O, network, etc.) of a collection of processes. CGroups are
+used to ensure that containers on the same host are not impacted by each other.
+
+- _Secure computing mode (seccomp)_ profiles can be associated with a container to
+restrict available system calls.
+
+- Deploying containers using _RHCOS_ reduces the attack surface by minimizing the host environment and tuning it for containers.
+
+image::_images/rhcos_layers.png[]
 
 == Key RHCOS features
 
@@ -44,11 +62,10 @@ able to create additional machines and perform updates based on the latest RHCOS
 configurations.
 
 * **CRI-O container runtime**: Although RHCOS contains features for running the
-OCI- and libcontainer-formatted containers that Docker requires, it incorporates
-the CRI-O container engine
-instead of the Docker container engine. By focusing on features needed by
-Kubernetes platforms, such as OpenShift Container Platform, CRI-O can offer specific
-compatibility with different Kubernetes versions. CRI-O also offers a smaller
+OCI and libcontainer-formatted containers that Docker requires, it incorporates
+the CRI-O container engine instead of the Docker container engine. 
+By focusing on features needed by Kubernetes platforms, such as OpenShift Container Platform, 
+CRI-O can offer specific compatibility with different Kubernetes versions. CRI-O also offers a smaller
 footprint and reduced attack surface than is possible with container engines
 that offer a larger feature set. At the moment, CRI-O is only available as a
 container engine within OpenShift Container Platform clusters.
@@ -89,17 +106,10 @@ For RHCOS systems, the layout of the `rpm-ostree` file system has the
 * `/var/lib/containers` is the graph storage location for storing container
  images.
 
-
 == Choosing how to configure RHCOS
 
 RHCOS is designed to deploy on an OpenShift Container Platform cluster with a minimal amount
 of user configuration. In its most basic form, this consists of:
-
-* Starting with a provisioned infrastructure, such as on AWS, or provisioning
-the infrastructure yourself.
-
-* Supplying a few pieces of information, such as credentials and cluster name,
-in an `install-config.yaml` file when running `openshift-install`.
 
 Because RHCOS systems in OpenShift Container Platform are designed to be fully managed
 from the OpenShift Container Platform cluster after that, directly changing an RHCOS machine is
@@ -143,28 +153,3 @@ To accomplish these tasks, you can augment the `openshift-install` process to in
 objects such as MachineConfigs.
 Those procedures that result in creating MachineConfigs can be passed to the Machine Config Operator
 after the cluster is up.
-
-
-[NOTE]
-====
-The Ignition config files that the installation program generates contain certificates that expire after 24 hours. You must complete your cluster installation and keep the cluster running for 24 hours in a non-degraded state to ensure that the first certificate rotation has finished.
-====
-
-== Choosing how to configure RHCOS
-
-Differences between RHCOS deployments for OpenShift Container Platform are based on
-whether you are deploying on an infrastructure provisioned by the installer or by the user:
-
-* **Installer provisioned**: Some cloud environments offer pre-configured infrastructures
-that allow you to bring up an OpenShift Container Platform cluster with minimal configuration.
-For these types of deployments, you can supply Ignition configs
-that place content on each node so it is there when the cluster first boots.
-
-* **User provisioned**: If you are provisioning your own infrastructure, you have more flexibility
-in how you add content to a RHCOS node. For example, you could add kernel
-arguments when you boot the RHCOS ISO installer to install each system.
-However, in most cases where configuration is required on the operating system
-itself, it is best to provide that configuration through an Ignition config.
-
-The Ignition facility runs only when the RHCOS system is first set up.
-After that, Ignition configs can be supplied later using the MachineConfigs.

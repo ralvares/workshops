@@ -1,0 +1,50 @@
+== Multi-tenancy: Virtualization Versus Containers
+
+Traditional virtualization also enables multi-tenancy, but in a very different
+way from containers. Virtualization relies on a hypervisor spinning up guest
+virtual machines (VMs), each of which has its own operating system (OS), as well
+as the running application and its dependencies.
+
+With VMs, the hypervisor isolates the guests from each other and from the host
+kernel. Fewer individuals and processes have access to the hypervisor, reducing
+the attack surface on the physical server. That said, security must still be
+monitored: one guest VM may be able to use hypervisor bugs to gain access to
+another VM or the host kernel. And, when the OS needs patching, it must be
+patched on all guest VMs using that OS.
+
+Containers can be run inside guest VMs, and there may be use cases where this is
+desirable. For example, you may be deploying a traditional application in a
+container, perhaps in order to lift-and-shift an application to the cloud.
+However, container multi-tenancy on a single host provides a more lightweight,
+flexible, and easier-to-scale deployment solution. This deployment model is
+particularly appropriate for cloud-native applications.
+
+image::_images/virtual_machines_and_containers.png[]
+
+== What Are Containers?
+
+Containers have broad appeal because they allow users to easily package an application, and
+all its dependencies, into a single image that can be promoted from development, to test, and
+to production — without change. Containers make it easy to ensure consistency across environ-
+ments and multiple deployment targets like physical servers, virtual machines (VMs), and private
+or public clouds. This helps teams more easily develop and manage the applications that deliver
+business value.
+
+Some of the benefits of using containers include:
+
+[options="header",frame="all",grid="none"]
+|===
+|INFRASTRUCTURE |APPLICATIONS
+
+|Sandboxed application processes on a shared Linux OS kernel
+|Package my application and all of its dependencies
+
+|Simpler, lighter, and denser than virtual machines
+|Deploy to any environment in seconds and enable CI/CD
+
+|Portable across different environments
+|Easily access and share containerized components
+|===
+
+
+
