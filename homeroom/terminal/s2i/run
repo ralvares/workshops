@@ -1,0 +1,54 @@
+#!/bin/bash
+
+set -x
+
+set -eo pipefail
+
+# Define what is enabled and disabled.
+
+ENABLE_CONSOLE=true
+ENABLE_DASHBOARD=true
+ENABLE_SLIDES=false
+ENABLE_TERMINAL=true
+ENABLE_WEBDAV=false
+ENABLE_WORKSHOP=true
+
+if [ x"$WORKSHOP_ONLY" != x"" ]; then
+    ENABLE_CONSOLE=false
+    ENABLE_DASHBOARD=false
+    ENABLE_SLIDES=false
+    ENABLE_TERMINAL=false
+    ENABLE_WEBDAV=false
+
+    DEFAULT_PAGE=workshop
+fi
+
+export ENABLE_CONSOLE
+export ENABLE_DASHBOARD
+export ENABLE_SLIDES
+export ENABLE_TERMINAL
+export ENABLE_WEBDAV
+export ENABLE_WORKSHOP
+
+export DEFAULT_PAGE
+
+# Setup environment, including login.
+
+. /usr/local/bin/setup-environ.sh
+
+# Run startup actions if supplied.
+
+if [ -x /opt/app-root/etc/init.d/rc.local ]; then
+    /opt/app-root/etc/init.d/rc.local
+fi
+
+# Run workshop specific initialisation.
+
+if [ -x /opt/app-root/src/.workshop/setup ]; then
+    /opt/app-root/src/.workshop/setup
+fi
+
+# Run supervisord.
+
+exec supervisord --nodaemon \
+    --configuration /opt/workshop/etc/supervisord.conf
