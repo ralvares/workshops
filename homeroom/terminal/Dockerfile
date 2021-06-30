@@ -3,7 +3,7 @@ FROM quay.io/centos/centos:stream8
 USER root
 
 RUN HOME=/root && \
-INSTALL_PKGS="npm unzip nano python3-devel python3-setuptools python3-pip bash-completion \
+INSTALL_PKGS="wget git npm unzip nano python3-devel python3-setuptools python3-pip bash-completion \
         cadaver jq tmux sudo buildah podman atlas-devel gcc-gfortran \
         libffi-devel libtool-ltdl httpd httpd-devel mod_ssl mod_ldap mod_session python3-mod_wsgi supervisor mercurial \
         ansible python3-openshift python3-wheel python3-virtualenv python3-jmespath bc java-1.8.0-openjdk java-1.8.0-openjdk-devel" && \

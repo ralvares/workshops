@@ -8,7 +8,7 @@ set -eo pipefail
 
 shopt -s dotglob
 
-mv /tmp/src/* /opt/app-root/src || true
+mv /tmp/src/* /opt/app-root/ || true
 
 rm -rf /tmp/src
 
