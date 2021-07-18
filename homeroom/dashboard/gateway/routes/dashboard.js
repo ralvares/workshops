@@ -31,7 +31,7 @@ module.exports = function(app, prefix) {
         }
     }
 
-    var workshop_dir = process.env.WORKSHOP_DIR || '/opt/app-root/src/workshop';
+    var workshop_dir = process.env.WORKSHOP_DIR || '/opt/app-root/workshop';
 
     var slides_dir = process.env.SLIDES_DIR;
 

@@ -1,0 +1,15 @@
+name: Red Hat OpenShift Service Mesh in Action
+    
+modules:
+  activate:
+  - intro
+  - setup-environment
+  - kiali
+  - routing
+  - mtls
+  - authentication
+  - authentication-sso
+#  - acl
+  - circuit-breaking
+  - rate-limiting
+  - fault-injection
