@@ -16,9 +16,9 @@ The Overlay Filesystem mechanism allows the container to use the files provided 
 ```
 adduser rootless
 su - rootless
-curl https://kojipkgs.fedoraproject.org//packages/Fedora-Container-Base/31/20200426.0/images/Fedora-Container-Base-31-20200426.0.x86_64.tar.xz -o Fedora-Container-Base-31-20200426.0.x86_64.tar.xz
+curl https://kojipkgs.fedoraproject.org//packages/Fedora-Container-Base/35/1.2/images/Fedora-Container-Base-35-1.2.x86_64.tar.xz -o FFedora-Container-Base-35-1.2.x86_64.tar.xz
 mkdir Fedora
-tar -xJvf Fedora-Container-Base-31-20200426.0.x86_64.tar.xz -C Fedora
+tar -xJvf Fedora-Container-Base-35-1.2.x86_64.tar.xz -C Fedora
 ```
 
 == What's in an Image
