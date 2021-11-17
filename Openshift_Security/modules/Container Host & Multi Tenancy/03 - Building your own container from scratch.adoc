@@ -1,4 +1,4 @@
-= Running your own container from scratch.
+= Running your own container from scratch. #DEPRECATED#
 
 Let's put all of our new namespace skills to use.
 
@@ -65,14 +65,6 @@ adduser rootless
 su - rootless
 unshare -mipfnuUr --mount-proc chroot chroot /bin/bash
 cat /etc/redhat-release
-```
-
-Mount tmpfs,sysfs and proc
-
-```
-mount -t tmpfs none /tmp
-mount -t sysfs none /sys
-mount -t proc none /proc
 ```
 
 On the second Terminal run the following command:
