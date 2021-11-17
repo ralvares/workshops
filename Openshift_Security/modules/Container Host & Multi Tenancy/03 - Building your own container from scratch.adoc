@@ -16,7 +16,7 @@ The Overlay Filesystem mechanism allows the container to use the files provided 
 ```
 adduser rootless
 su - rootless
-curl https://kojipkgs.fedoraproject.org//packages/Fedora-Container-Base/35/1.2/images/Fedora-Container-Base-35-1.2.x86_64.tar.xz -o FFedora-Container-Base-35-1.2.x86_64.tar.xz
+curl https://kojipkgs.fedoraproject.org//packages/Fedora-Container-Base/35/1.2/images/Fedora-Container-Base-35-1.2.x86_64.tar.xz -o Fedora-Container-Base-35-1.2.x86_64.tar.xz
 mkdir Fedora
 tar -xJvf Fedora-Container-Base-35-1.2.x86_64.tar.xz -C Fedora
 ```
@@ -32,20 +32,20 @@ ls -la Fedora
 ```
 
 ```
-total 12
-drwxr-xr-x. 2 root root    6 Apr 26 11:08 .
-dr-xr-x---. 2 root root   27 Apr 26 09:36 ..
-drwxr-xr-x. 2 root root   50 Apr 26 05:48 852ade322fd94e2f815bc765551d81c01d85fc05a6dd9124ba1929e57b1f52c2
--rw-r--r--. 1 root root 1316 Apr 26 05:48 e17a9754ae474f5312f21bdaf150884e2149c53c080e163f64adde27d1cf6a13.json
--rw-r--r--. 1 root root  242 Apr 26 05:48 manifest.json
--rw-r--r--. 1 root root  126 Apr 26 05:48 repositories
+total 24
+drwxrwxr-x 3 rootless rootless 4096 Nov 17 11:59 .
+drwx------ 6 rootless rootless 4096 Nov 17 11:59 ..
+-rw-r--r-- 1 rootless rootless 1316 Oct 26 08:40 c735720e7cc00c1afae74af5f93615941e3f797ea5e155a797b4b0f13acab886.json
+drwxr-xr-x 2 rootless rootless 4096 Oct 26 08:40 d2e7a8b1692d05930890cd6a9a67d153467f031d9c3a2a742ebebe85964abbbd
+-rw-r--r-- 1 rootless rootless  235 Oct 26 08:40 manifest.json
+-rw-r--r-- 1 rootless rootless  119 Oct 26 08:40 repositories
 ```
 
 Now let's extract the contents of the layer.
 
 ```
 mkdir chroot
-tar xvf Fedora/852ade322fd94e2f815bc765551d81c01d85fc05a6dd9124ba1929e57b1f52c2/layer.tar -C chroot/
+tar xvf Fedora/d2e7a8b1692d05930890cd6a9a67d153467f031d9c3a2a742ebebe85964abbbd/layer.tar -C chroot/
 ```
 
 Now, List the content of the chroot
