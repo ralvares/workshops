@@ -54,7 +54,7 @@ Now, List the content of the chroot
 ls -la chroot
 ```
 
-What we have just extracted is a Fedora 31 system's root filesystem!
+What we have just extracted is a Fedora 35 system's root filesystem!
 
 Let's add a chroot to our namespace skills to create a container.
 
